@@ -1,11 +1,9 @@
 #![allow(dead_code)]
 
 use color_eyre::Report;
+use reqwest::Client;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use reqwest::Client;
-use std::future::Future;
-use std::sync::Arc;
 
 pub const URL_1: &str = "https://jhaveri.net";
 pub const URL_2: &str = "https://fasterthanli.me";
@@ -16,14 +14,12 @@ async fn main() -> Result<(), Report> {
 
     info!("Hi from the program");
     let client = Client::new();
-    let client = Arc::new(client);
 
-
-    let fut1 = fetch(client.clone(), URL_1);
     let fut2 = fetch(client.clone(), URL_2);
+    let fut1 = fetch(client.clone(), URL_1);
 
-    let handle1 = tokio::spawn(fut1);
     let handle2 = tokio::spawn(fut2);
+    let handle1 = tokio::spawn(fut1);
 
     handle2.await.unwrap()?;
     handle1.await.unwrap()?;
@@ -52,11 +48,9 @@ fn setup() -> Result<(), Report> {
     Ok(())
 }
 
-fn fetch(client: Arc<Client>, url: &'static str) -> impl Future<Output=Result<(), Report>> + 'static {
-    async move {
-        let res = client.get(url).send().await?.error_for_status()?;
-        info!(%url, content_type = ?res.headers().get("content-type"), "Got a response");
+async fn fetch(client: Client, url: &str) -> Result<(), Report> {
+    let res = client.get(url).send().await?.error_for_status()?;
+    info!(%url, content_type = ?res.headers().get("content-type"), "Got a response");
 
-        Ok(())
-    }
+    Ok(())
 }
