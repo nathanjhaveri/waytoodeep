@@ -5,13 +5,12 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 use reqwest::Client;
 use std::future::Future;
-use std::time::Duration;
 use std::sync::Arc;
 
 pub const URL_1: &str = "https://jhaveri.net";
 pub const URL_2: &str = "https://fasterthanli.me";
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Report> {
     setup()?;
 
@@ -19,16 +18,15 @@ async fn main() -> Result<(), Report> {
     let client = Client::new();
     let client = Arc::new(client);
 
+
     let fut1 = fetch(client.clone(), URL_1);
-    tokio::spawn(fut1);
     let fut2 = fetch(client.clone(), URL_2);
-    tokio::spawn(fut2);
 
+    let handle1 = tokio::spawn(fut1);
+    let handle2 = tokio::spawn(fut2);
 
-    //fut1.await?;
-    //fut2.await?;
-
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    handle2.await.unwrap()?;
+    handle1.await.unwrap()?;
 
     Ok(())
 }
