@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 
 use color_eyre::Report;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::{
@@ -15,6 +13,7 @@ use tracing_subscriber::EnvFilter;
 
 use webpki_roots;
 
+mod tj;
 
 pub const URL_1: &str = "https://jhaveri.net";
 pub const URL_2: &str = "https://jhaveri.net/chess/about.html";
@@ -28,13 +27,8 @@ async fn main() -> Result<(), Report> {
     let fut2 = fetch(URL_2);
     let fut1 = fetch(URL_1);
 
-    let mut group = vec![fut1, fut2]
-        .into_iter()
-        .collect::<FuturesUnordered<_>>();
-
-    while let Some(item) = group.next().await {
-        item?;
-    }
+    let res = tj::try_join(fut1, fut2,).await?;
+    info!(?res, "all done");
 
     Ok(())
 }
@@ -46,7 +40,7 @@ Connection: close\r
 \r
 ";
 
-async fn fetch(url: &str) -> Result<(), Report> {
+async fn fetch(name: &str) -> Result<&str, Report> {
     let addr = SocketAddr::from(([138, 68, 195, 194], 443));
     let socket = TcpStream::connect(addr).await?;
 
@@ -67,9 +61,9 @@ async fn fetch(url: &str) -> Result<(), Report> {
     socket.read_to_string(&mut response).await?;
 
     let status = response.lines().next().unwrap_or_default();
-    info!(%status, %url, "Got Response!");
+    info!(%status, %name, "Got Response!");
 
-    Ok(())
+    Ok(name)
 }
 
 fn type_name_of<T>(_: &T) -> &str {
