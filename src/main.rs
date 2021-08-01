@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use color_eyre::Report;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -12,6 +12,7 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use webpki_roots;
+use tokio::time::sleep;
 
 mod tj;
 
@@ -28,6 +29,7 @@ async fn main() -> Result<(), Report> {
     let fut1 = fetch(URL_1);
 
     let res = tj::try_join(fut1, fut2,).await?;
+
     info!(?res, "all done");
 
     Ok(())
